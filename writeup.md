@@ -22,11 +22,9 @@ The goals / steps of this project are the following:
 
 [image0]: ./test_images/straight_linea1.jpg "distorted"
 [image1]: ./rnd/undistorted/straight_lines1.jpg "Undistorted"
-[image2]: 
+[image2]: .fit.png
 [image3]: ./rnd/warped/color_test2.jpg "Road Transformed"
-[image4]: ./examples/warped_straight_lines.jpg "Warp Example"
-[image5]: ./examples/color_fit_lines.jpg "Fit Visual"
-[image6]: ./examples/example_output.jpg "Output"
+[image6]: .result.png "Output"
 [video1]: ./output_challenge_video.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
@@ -69,7 +67,6 @@ To demonstrate this step, I will describe how I apply the distortion correction 
 
 I used a combination of color and gradient thresholds to generate a binary image.  Here's an example of my output for this step.
 
-![alt text][image2]
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
@@ -93,7 +90,6 @@ dst = np.float32([[offset, offset],
 
 Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
 
-![alt text][image5]
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
@@ -101,6 +97,7 @@ code available from line 286 to line 296.
 
 Used numpy polyfit and adjusted curvature for world space.
 
+![alt text][image2]
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 

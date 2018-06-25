@@ -100,7 +100,7 @@ def get_warped_image(image):
     global Minv
 
     #h, w = image.shape[0], image.shape[1]
-    #h, w = (300 ,420 )
+    h, w = (300 ,420 )
 
     #offset = 150 # offset for dst points
     offset = 100 # offset for dst points
@@ -321,9 +321,9 @@ def process_image(image):
     # Combine the result with the original image
     result = cv2.addWeighted(image, 1, newwarp, 0.3, 0)
     #cv2.imshow('title', warped)
-    plt.imshow( output)
+    #plt.imshow( output)
     #cv2.waitKey(0)
-    #plt.imshow(result)
+    plt.imshow(result)
     plt.show()
     return result
     #quit()
