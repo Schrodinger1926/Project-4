@@ -18,13 +18,13 @@ The goals / steps of this project are the following:
 [//]: # (Image References)
 
 [image00]: ./camera_cal/calibration1.jpg "distorted"
-[image001]: ./rnd/calib_output/calibration1.jpg "drawn"
+[image01]: ./rnd/calib_output/calibration1.jpg "drawn"
 
 [image0]: ./test_images/straight_linea1.jpg "distorted"
 [image1]: ./rnd/undistorted/straight_lines1.jpg "Undistorted"
-[image2]: .fit.png
+[image2]: fit.png "fit"
 [image3]: ./rnd/warped/color_test2.jpg "Road Transformed"
-[image6]: .result.png "Output"
+[image6]: result.png "Output"
 [video1]: ./output_challenge_video.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
