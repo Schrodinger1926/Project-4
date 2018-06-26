@@ -16,17 +16,18 @@ M, Minv = None, None
 
 def get_img_points(img_abs_path):
 
-    # Read image (BGR)
-    img = cv2.imread(img_abs_path)
+    # Read image (RGB)
+    img = mpimg.imread(img_abs_path)
+
+    img_size = (720, 1280)
 
     # convert to gray scale
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
     # find chess corners in the given image
     ret, corners = cv2.findChessboardCorners(gray, (nx, ny), None)
 
-    if ret:
-        return corners
+    return ret, corners
 
 
 # gradient and magnitude thresholding
@@ -60,7 +61,7 @@ def mag_thresh(img, sobel_kernel=3, thresh=(0, 255)):
 
     # Get binary image
     bmag = np.zeros_like(smag)
-    bmag[(smag >= thresh[0]) & (smag <= thresh[1])] = 1
+    bmag[(smag > thresh[0]) & (smag < thresh[1])] = 1
 
     return bmag
 
@@ -76,12 +77,12 @@ def dir_threshold(img, sobel_kernel=3, thresh=(0, np.pi/2)):
     bgrad =  np.zeros_like(grad)
 
     # Apply threshold
-    bgrad[(grad >= thresh[0]) & (grad <= thresh[1])] = 1
+    bgrad[(grad > thresh[0]) & (grad < thresh[1])] = 1
 
     return bgrad
 
 
-def hls_select(img, thresh=(0, 255)):
+def s_select(img, thresh=(0, 255)):
     # Convert to HLS color space
     img_hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
 
@@ -99,11 +100,11 @@ def get_warped_image(image):
     global M
     global Minv
 
-    #h, w = image.shape[0], image.shape[1]
+    # h, w = image.shape[0], image.shape[1]
     h, w = (300 ,420 )
 
     #offset = 150 # offset for dst points
-    offset = 100 # offset for dst points
+    offset = 50 # offset for dst points
     """
     src1 = np.float32([[557, 477],
                        [370, 610],
@@ -114,9 +115,10 @@ def get_warped_image(image):
                        [301, 644],
                        [998, 644],
                        [711, 466]])
+
     dst = np.float32([[offset, offset],
-                      [offset, h - offset//2],
-                      [w - offset, h - offset//2],
+                      [offset, h],
+                      [w - offset, h],
                       [w - offset, offset]])
 
     M = cv2.getPerspectiveTransform(src1, dst)
@@ -136,7 +138,7 @@ def get_warped_image(image):
 
 # window settings
 window_width = 50
-window_height = 40 # Break image into 9 vertical layers since image height is 720
+window_height = 80 # Break image into 9 vertical layers since image height is 720
 margin = 100 # How much to slide left and right for searching
 
 
@@ -191,11 +193,18 @@ def r_channel_threshold(image, thresh = (0, 255)):
     return r_binary
 
 
+def g_channel_threshold(image, thresh = (0, 255)):
+    g_channel = image[:, :, 1]
+    g_binary = np.zeros_like(g_channel)
+    g_binary[(g_channel > thresh[0]) & (g_channel < thresh[1])] = 1
+    return g_binary
+
+
 def l_select(img, thresh=(0, 255)):
     # Convert to HLS color space
     img_hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
 
-    # Apply a threshold to the S channel
+    # Apply a threshold to the L channel
     img_l_channel = img_hls[:, :, 1]
 
     # Apply threshold
@@ -205,28 +214,39 @@ def l_select(img, thresh=(0, 255)):
 
 
 def process_image(image):
+
+    # undistort image
+    image = cv2.undistort(image, mtx, dist, None, mtx)
+
     ksize = 3
     # Gradient thresholding
-    gradx = abs_sobel_thresh(image, orient = 'x', sobel_kernel = ksize, thresh = (50, 100))
-    #grady = abs_sobel_thresh(image, orient = 'y', sobel_kernel = ksize, thresh = (40, 100))
+    gradx = abs_sobel_thresh(image, orient = 'x', sobel_kernel = ksize, thresh = (100, 255))
 
     # Magnitude thresholding
-    mag_binary = mag_thresh(image, sobel_kernel = ksize, thresh = (150, 255))
+    mag_binary = mag_thresh(image, sobel_kernel = ksize, thresh = (100, 255))
 
     # Directional thresholding
-    dir_binary = dir_threshold(image, sobel_kernel = 15, thresh = (0.7, 1.3))
+    dir_binary = dir_threshold(image, sobel_kernel = 5, thresh = (0.7, 1.3))
 
-    # saturation thresholding
-    hls_binary = hls_select(image, thresh=(100, 255))
+    # saturation thresholding (yellow lines)
+    s_binary = s_select(image, thresh=(170, 255))
 
-    l_binary = hls_select(image, thresh=(150, 255))
+    # Luminence thresholding (white lines)
+    l_binary = l_select(image, thresh=(200, 255))
 
     # R-channel thresholding
-    r_binary = r_channel_threshold(image, thresh=(150, 255))
+    r_binary = r_channel_threshold(image, thresh=(200, 255))
+
+    # G-channel thresholding
+    g_binary = g_channel_threshold(image, thresh=(200, 255))
+
     # Combination step
     combined = np.zeros_like(dir_binary)
-    combined[(gradx == 1) | ((mag_binary == 1) & (dir_binary == 1)) | (hls_binary == 1)] = 1
+    #combined[((gradx == 1) & (l_binary == 1) & (r_binary)) | ((mag_binary == 1) & (dir_binary == 1)) | (s_binary == 1)] = 1
+    combined[((r_binary == 1) & (g_binary == 1))| (( gradx == 1) & (dir_binary == 1)) | (s_binary == 1)] = 1
 
+    #plt.imshow(combined, cmap = 'gray')
+    #plt.show()
     # Select area of interest
 
     # Perpective transform
@@ -323,10 +343,10 @@ def process_image(image):
     #cv2.imshow('title', warped)
     #plt.imshow( output)
     #cv2.waitKey(0)
-    plt.imshow(result)
-    plt.show()
-    return result
+    #plt.imshow(result)
+    #plt.show()
     #quit()
+    return result
 
 
 if __name__ == "__main__":
@@ -342,17 +362,26 @@ if __name__ == "__main__":
     obj_points = []
     img_points = []
     for filename in os.listdir(CALIB_DATA_DIR):
-        corners = get_img_points(img_abs_path = os.path.join(CALIB_DATA_DIR, filename))
-        if corners is not None:
+        ret, corners = get_img_points(img_abs_path = os.path.join(CALIB_DATA_DIR, filename))
+        if ret:
             obj_points.append(objP)
             img_points.append(corners)
 
     # Get coefficients
-    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(obj_points, img_points, img_size[::-1], None, None)
+    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(obj_points, img_points, img_size, None, None)
 
     if ret:
-      print("Calibration: PASSED")
+        print("Calibration: PASSED")
+        """
+        image = mpimg.imread(os.path.join(CALIB_DATA_DIR, 'calibration1.jpg'))
+        
+        image = cv2.undistort(image, mtx, dist, None, mtx)
+        plt.imshow(image)
+        plt.title('sanity_check') 
+        plt.show()
+        """
 
+      
     # Process images
     for filename in os.listdir(IMG_INPUT_DIR):
         sys.stdout.write('\r Processing : {}'.format(filename))
@@ -362,14 +391,13 @@ if __name__ == "__main__":
         # undistort image
         image = cv2.undistort(image, mtx, dist, None, mtx)
         process_image(image)
-    """
-    video_filename = "challenge_video.mp4"
+
+    video_filename = "project_video.mp4"
     clip1 = VideoFileClip(video_filename)
 
     white_output = "output_{}".format(video_filename)
     white_clip = clip1.fl_image(process_image)
     white_clip.write_videofile(white_output, audio=False)
-    """
 
 
 
